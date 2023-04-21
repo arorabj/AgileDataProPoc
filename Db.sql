@@ -1,7 +1,7 @@
-create database agile_poc;
-create schema raw;
-use database agile_poc;
-use schema raw;
+--create database agile_poc;
+--create schema raw;
+--use database agile_poc;
+--use schema raw;
 
 drop table if exists siteinfo;
 create table siteinfo
@@ -394,9 +394,11 @@ on td_snrdb.ParameterSource='SNR'
 drop table if  exists SiteIncidentDetails;
 create table SiteIncidentDetails as
 Select
-    SiteID,
-    MODELNUMBER,
-    EVENTID,
+    SiteId,
+    ModelNumber,
+    EventId,
+    PacketSent ,
+    PacketSent - PacketLost as PacketRecieved ,
     (noiseIncidentFlag +
         InterferenceSourcePowerIncidentFlag +
         AdjacentChannelInterferenceDbmIncidentFlag +
@@ -468,20 +470,29 @@ Temp2 as (
     on t.Categorytype = sid.IncidentsSeverity
     and  t.ModelNumber = sid .ModelNumber
     group by t.ModelNumber, t.Categorytype
-    order by 1, 2 desc)
+    order by 1, 2 desc),
+Temp3 as (Select
+            100*(Sum(PacketRecieved)/Sum(PacketSent))  as clientThroughput,
+            ModelNumber
+          from SiteIncidentDetails
+          group by ModelNumber)
 Select
-    ModelNumber,
-    100 - Sum (case when Categorytype='P1'
-              then severityCount
-              when Categorytype='P2'
-              then severityCount *.75
-              when Categorytype='P3'
-              then severityCount *.5
-              when Categorytype='P4'
-              then severityCount *.25
+    t2.ModelNumber, t3.clientThroughput,
+    100 - Sum (case when t2.Categorytype='P1'
+              then t2.severityCount
+              when t2.Categorytype='P2'
+              then t2.severityCount *.75
+              when t2.Categorytype='P3'
+              then t2.severityCount *.5
+              when t2.Categorytype='P4'
+              then t2.severityCount *.25
               else 0 end
-              ) as ClientThroughput
-from temp2
-group by ModelNumber;
+              ) as connection_success
+from temp2 t2
+inner join temp3 t3
+on t2.ModelNumber=t3.ModelNumber
+group by t2.ModelNumber, t3.clientThroughput;
+
+
 
 
