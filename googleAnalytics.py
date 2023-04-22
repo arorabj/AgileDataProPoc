@@ -1,3 +1,5 @@
+#ip install google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client
+
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
